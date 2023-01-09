@@ -3,27 +3,18 @@ package main
 import (
 	"net"
 	"testing"
-	"fmt"
-	"os/exec"
-	"log"
 	"time"
+	"fmt"
 )
 
-func TestMain(t *testing.T) {
-	var err error
-	cmd := exec.Command("./server")
-	err = cmd.Start()
-	if err != nil {
-		log.Fatal(err)
-	}
-
+func TestStartServer(t *testing.T) {
+	go startServer()
 	retries := 0
 	for {
-		_, err = net.Dial("tcp", "0.0.0.0:6379")
+		_, err := net.Dial("tcp", "0.0.0.0:6379")
 
 		if err != nil && retries > 10 {
-			fmt.Println("All retries failed.")
-			log.Fatal(err)
+			t.Fatal("All retries failed.")
 		}
 
 		if err != nil {
@@ -34,10 +25,7 @@ func TestMain(t *testing.T) {
 		} else {
 			break
 		}
-
 	}
-
-	fmt.Println("Connection successful")
 
 	return
 }
