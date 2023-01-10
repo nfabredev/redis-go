@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+
 	startServer()
 
 	os.Exit(0)
@@ -26,6 +27,7 @@ func startServer() {
 
 	conn, err := listener.Accept()
 	defer conn.Close()
+
 	if err != nil {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)

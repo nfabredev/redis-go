@@ -27,5 +27,7 @@ func TestStartServer(t *testing.T) {
 		}
 	}
 
+	fmt.Println("Connection successful")
+
 	return
 }
