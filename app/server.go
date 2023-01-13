@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -101,6 +102,17 @@ func handleRequest(request []string) (string, error) {
 	case strings.EqualFold(command, "ping"):
 		response := encodeSimpleString("PONG")
 		return response, nil
+
+	case strings.EqualFold(command, "echo"):
+		fmt.Println(len(request))
+		REQUEST_LENGTH_WITH_MESSAGE := 5
+
+		if len(request) != REQUEST_LENGTH_WITH_MESSAGE {
+			return "", errors.New(encodeError("ECHO command called without message"))
+		}
+		response := encodeBulkString(request[3])
+		return response, nil
+
 	default:
 		return "", errors.New(encodeError("unknown command '" + request[1]))
 	}
@@ -112,6 +124,11 @@ func encodeSimpleString(string string) string {
 
 func encodeError(string string) string {
 	return "-ERR " + string + "\r\n"
+}
+
+func encodeBulkString(string string) string {
+	stringLength := strconv.Itoa(len(string))
+	return "$" + stringLength + "\r\n" + string + "\r\n"
 }
 
 func handleResponse(conn net.Conn, response string) {
