@@ -13,10 +13,10 @@ import (
 )
 
 func main() {
-	conn := startServer()
-	handleConnection(conn)
-
-	os.Exit(0)
+	for {
+		conn := startServer()
+		handleConnection(conn)
+	}
 }
 
 func startServer() net.Conn {
@@ -27,6 +27,7 @@ func startServer() net.Conn {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
+	defer listener.Close()
 	fmt.Println("Listening")
 
 	conn, err := listener.Accept()
@@ -40,30 +41,32 @@ func startServer() net.Conn {
 }
 
 func handleConnection(conn net.Conn) {
-	for {
-	buf := make([]byte, 1024)
-	
-	_, err := conn.Read(buf)
-	
-	if err != nil {
-		if err == io.EOF {
-			// connection closed by client
-			break
-			} else {
-				log.Fatal("Error reading from client: ", err.Error())
+	go func(conn net.Conn) {
+		for {
+			buf := make([]byte, 1024)
+
+			_, err := conn.Read(buf)
+
+			if err != nil {
+				if err == io.EOF {
+					// connection closed by client
+					break
+				} else {
+					log.Fatal("Error reading from client: ", err.Error())
+				}
 			}
+
+			request, err := parseRequest(buf)
+			if err != nil {
+				handleResponse(conn, err.Error())
+			}
+			response, err := handleRequest(request)
+			if err != nil {
+				handleResponse(conn, err.Error())
+			}
+			handleResponse(conn, response)
 		}
-		
-		request, err := parseRequest(buf)
-		if err != nil {
-			handleResponse(conn, err.Error())
-		}
-		response, err := handleRequest(request)
-		if err != nil {
-			handleResponse(conn, err.Error())
-		}
-		handleResponse(conn, response)
-	}
+	}(conn)
 }
 
 func parseRequest(buf []byte) ([]string, error) {
