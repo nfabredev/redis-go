@@ -40,28 +40,30 @@ func startServer() net.Conn {
 }
 
 func handleConnection(conn net.Conn) {
+	for {
 	buf := make([]byte, 1024)
-
+	
 	_, err := conn.Read(buf)
-
+	
 	if err != nil {
 		if err == io.EOF {
 			// connection closed by client
-			return
-		} else {
-			log.Fatal("Error reading from client: ", err.Error())
+			break
+			} else {
+				log.Fatal("Error reading from client: ", err.Error())
+			}
 		}
+		
+		request, err := parseRequest(buf)
+		if err != nil {
+			handleResponse(conn, err.Error())
+		}
+		response, err := handleRequest(request)
+		if err != nil {
+			handleResponse(conn, err.Error())
+		}
+		handleResponse(conn, response)
 	}
-
-	request, err := parseRequest(buf)
-	if err != nil {
-		handleResponse(conn, err.Error())
-	}
-	response, err := handleRequest(request)
-	if err != nil {
-		handleResponse(conn, err.Error())
-	}
-	handleResponse(conn, response)
 }
 
 func parseRequest(buf []byte) ([]string, error) {
