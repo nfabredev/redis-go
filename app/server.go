@@ -1,5 +1,3 @@
-// server.go
-
 package main
 
 import (
@@ -9,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"storage"
 	"strconv"
 	"strings"
 )
@@ -113,6 +112,38 @@ func handleRequest(request []string) (string, error) {
 		response := encodeBulkString(request[3])
 		return response, nil
 
+	case strings.EqualFold(command, "set"):
+		REQUEST_LENGTH_WITH_KEY := 5
+		REQUEST_LENGTH_WITH_KEY_VALUE := 7
+
+		var key string
+		var value string
+
+		if len(request) == REQUEST_LENGTH_WITH_KEY {
+			key = request[3]
+			value = ""
+		} else if len(request) == REQUEST_LENGTH_WITH_KEY_VALUE {
+			key = request[3]
+			value = request[5]
+		} else {
+			return "", errors.New(encodeError("SET command called without key value pair to set"))
+		}
+		storage.Set(key, value)
+		response := encodeSimpleString("OK")
+		return response, nil
+
+	case strings.EqualFold(command, "get"):
+		REQUEST_LENGTH_WITH_KEY := 5
+
+		if len(request) != REQUEST_LENGTH_WITH_KEY {
+			return "", errors.New(encodeError("GET command called without a key to retrieve"))
+		}
+		storedKey, err := storage.Get(request[3])
+		if err != nil {
+			return "", errors.New(encodeError(err.Error()))
+		}
+		response := encodeBulkString(storedKey)
+		return response, nil
 	default:
 		return "", errors.New(encodeError("unknown command '" + request[1]))
 	}
