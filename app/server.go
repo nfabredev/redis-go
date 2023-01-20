@@ -10,6 +10,7 @@ import (
 	"storage"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -115,16 +116,25 @@ func handleRequest(request []string) (string, error) {
 	case strings.EqualFold(command, "set"):
 		REQUEST_LENGTH_WITH_KEY := 5
 		REQUEST_LENGTH_WITH_KEY_VALUE := 7
+		REQUEST_LENGTH_WITH_KEY_VALUE_EXPIRY := 11
 
 		var key string
-		var value string
+		var value storage.Value
+		var exp int64 = 0
 
 		if len(request) == REQUEST_LENGTH_WITH_KEY {
 			key = request[3]
-			value = ""
 		} else if len(request) == REQUEST_LENGTH_WITH_KEY_VALUE {
 			key = request[3]
-			value = request[5]
+			value = storage.Value{Value: request[5], Exp: exp}
+		} else if len(request) == REQUEST_LENGTH_WITH_KEY_VALUE_EXPIRY {
+			exp, err := strconv.ParseInt(request[9], 10, 64)
+			if err != nil {
+				return "", err
+			}
+			key = request[3]
+			exp = setExpiry(exp)
+			value = storage.Value{Value: request[5], Exp: exp}
 		} else {
 			return "", errors.New(encodeError("SET command called without key value pair to set"))
 		}
@@ -138,11 +148,21 @@ func handleRequest(request []string) (string, error) {
 		if len(request) != REQUEST_LENGTH_WITH_KEY {
 			return "", errors.New(encodeError("GET command called without a key to retrieve"))
 		}
-		storedKey, err := storage.Get(request[3])
+
+		Value, err := storage.Get(request[3])
 		if err != nil {
 			return "", errors.New(encodeError(err.Error()))
 		}
-		response := encodeBulkString(storedKey)
+
+		value := Value.Value
+		exp := Value.Exp
+
+		var response string
+		if exp == 0 || exp > time.Now().UnixNano()/int64(time.Millisecond) {
+			response = encodeBulkString(value)
+		} else {
+			response = returnNullString()
+		}
 		return response, nil
 	default:
 		return "", errors.New(encodeError("unknown command '" + request[1]))
@@ -164,4 +184,13 @@ func encodeBulkString(string string) string {
 
 func handleResponse(conn net.Conn, response string) {
 	conn.Write([]byte(response))
+}
+
+func setExpiry(exp int64) int64 {
+	fmt.Println("Setting expiry to: " + fmt.Sprint((time.Now().UnixNano()/int64(time.Millisecond))+exp))
+	return (time.Now().UnixNano() / int64(time.Millisecond)) + exp
+}
+
+func returnNullString() string {
+	return "$-1\r\n"
 }
